@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>体組成トラッカー</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#185FA5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="体組成">
+<style>
+:root{--bg:#faf9f5;--card:#fff;--tx:#1f1e1d;--tx2:#6b6a66;--bd:#e3e1da;--ac:#185FA5;--acbg:#E6F1FB;--ok:#3B6D11;--okbg:#EAF3DE;--wn:#854F0B;--wnbg:#FAEEDA;--rd:#A32D2D;--rdbg:#FCEBEB;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1f1e1d;--card:#2b2a28;--tx:#f1efe8;--tx2:#a8a69e;--bd:#44423e;--ac:#85B7EB;--acbg:#042C53;--ok:#97C459;--okbg:#173404;--wn:#FAC775;--wnbg:#412402;--rd:#F09595;--rdbg:#501313}}
+:root[data-theme="dark"]{--bg:#1f1e1d;--card:#2b2a28;--tx:#f1efe8;--tx2:#a8a69e;--bd:#44423e;--ac:#85B7EB;--acbg:#042C53;--ok:#97C459;--okbg:#173404;--wn:#FAC775;--wnbg:#412402;--rd:#F09595;--rdbg:#501313}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;line-height:1.6;font-size:15px}
+main{max-width:640px;margin:0 auto;padding:16px 14px 40px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:20px;font-weight:500;margin:0}
+h2{font-size:16px;font-weight:500;margin:0 0 8px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.sub{font-size:12px;color:var(--tx2)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.kpi{background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:8px 10px}
+.kpi .l{font-size:12px;color:var(--tx2)}.kpi .v{font-size:18px;font-weight:500}.kpi .d{font-size:12px}
+.bar{height:10px;border-radius:5px;background:var(--bd);overflow:hidden;margin:6px 0 2px}
+.bar i{display:block;height:100%;background:var(--ok);width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-size:13px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:3px 9px}
+.tag{display:inline-block;font-size:12px;font-weight:500;border-radius:6px;padding:2px 8px;background:var(--acbg);color:var(--ac)}
+.fg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+label{font-size:12px;color:var(--tx2);display:block}
+input,select{width:100%;font:inherit;font-size:16px;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+button{font:inherit;font-size:15px;font-weight:500;border:0;border-radius:8px;padding:10px 14px;background:var(--ac);color:var(--bg);cursor:pointer;width:100%;margin-top:10px}
+button.ghost{background:none;color:var(--tx2);width:auto;margin:0;padding:2px 8px;font-size:13px;font-weight:400}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
+th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--bd)}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:500;color:var(--tx2)}
+.up{color:var(--rd)}.dn{color:var(--ok)}
+.msg{font-size:13px;border-radius:8px;padding:8px 10px;margin-top:8px}
+svg{width:100%;height:auto;display:block}
+.opt{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--tx);padding:5px 0}.opt input{width:auto}.opt span{margin-left:auto;font-size:12px;color:var(--tx2);white-space:nowrap}
+#meal td:nth-child(2){text-align:left;white-space:normal}
+</style>
+</head>
+<body>
+<main>
+<div><h1>体組成トラッカー</h1><div class="sub" id="status">読み込み中…</div></div>
+
+<div class="card" id="phase"></div>
+
+<div class="card">
+<h2>食事プラン（あなた用）</h2>
+<div class="sub" style="margin-bottom:8px">タンパク質の概算。目標は 1日 140〜160g</div>
+<div class="tw"><table id="meal"></table></div>
+<div style="margin:12px 0 2px;font-size:14px;font-weight:500">足すなら（サバ缶は除外）</div>
+<div id="opts"></div>
+<div class="bar"><i id="mbar"></i></div>
+<div id="mtxt" style="font-size:14px"></div>
+<div class="chips"><span class="chip">朝はツナトースト（マヨは小さじ2まで）</span><span class="chip">昼に野菜か味噌汁を足す</span><span class="chip">プロテインは1日2〜3杯まで</span><span class="chip">夕飯直前ならジム後は省略可</span><span class="chip">実測はフェーズ0で見直す</span></div>
+</div>
+
+<div class="card">
+<h2>基準（11/8）からの変化</h2>
+<div class="grid" id="kpi"></div>
+<div class="sub" style="margin-top:10px">目標体重 77kg までの進捗</div>
+<div class="bar"><i id="pbar"></i></div>
+<div class="sub" id="ptxt"></div>
+</div>
+
+<div class="card">
+<h2>今週の記録</h2><div class="sub" id="wk" style="margin-bottom:8px"></div>
+<div class="fg">
+<div style="grid-column:1/3"><label>測定日（週1回・同じ曜日の朝）</label><input type="date" id="f_date"></div>
+<div><label>体重 (kg)</label><input id="f_w" type="number" inputmode="decimal" step="0.1"></div>
+<div><label>体脂肪率 (%)</label><input id="f_bf" type="number" inputmode="decimal" step="0.1"></div>
+<div><label>脂肪量 (kg)・空欄なら自動</label><input id="f_fat" type="number" inputmode="decimal" step="0.1"></div>
+<div><label>筋肉量 (kg)</label><input id="f_mus" type="number" inputmode="decimal" step="0.1"></div>
+<div><label>体水分率 (%)</label><input id="f_water" type="number" inputmode="decimal" step="0.1"></div>
+<div><label>基礎代謝量 (kcal)</label><input id="f_bmr" type="number" inputmode="numeric"></div>
+<div><label>内臓脂肪レベル</label><input id="f_visc" type="number" inputmode="numeric"></div>
+<div><label>脚点</label><input id="f_leg" type="number" inputmode="numeric"></div>
+</div>
+<button id="save">保存する</button>
+<div class="sub" id="saved" style="margin-top:6px"></div>
+</div>
+
+<div class="card">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px">
+<h2 style="margin:0">推移</h2>
+<select id="metric" style="width:auto"></select>
+</div>
+<div id="chart"></div>
+<div class="sub" id="legend"></div>
+</div>
+
+<div class="card">
+<h2>記録一覧</h2>
+<div class="tw"><table id="tbl"></table></div>
+</div>
+<div class="card">
+<h2>バックアップ</h2>
+<div class="sub">データはこの端末内に保存されます。機種変更やブラウザのデータ削除に備えて、ときどき書き出してください。</div>
+<button id="exp">データを書き出す（JSON）</button>
+<button id="imp" style="background:var(--bg);color:var(--tx);border:1px solid var(--bd)">データを読み込む</button>
+<input type="file" id="impf" accept="application/json,.json" style="display:none">
+<div class="sub" id="bmsg" style="margin-top:6px"></div>
+</div>
+</main>
+
+<script>
+var START_W=83.7, GOAL_W=77, GOAL_BF=15;
+var SEED=[["2026-01-25",86.7,24.8,21.5,61.8,49.8,1851,12,91],["2026-02-04",85.7,23.9,20.5,61.8,50.8,1849,12,93],["2026-03-29",86.8,22.1,19.2,64.1,53.7,1922,12,97],["2026-05-20",85.4,22.1,18.9,63.1,53,1886,12,96],["2026-07-19",85.6,22.4,19.2,63,52.5,1884,12,94],["2026-08-10",84.6,23.7,20.1,61.2,50.6,1827,12,92],["2026-09-02",85.5,22.6,19.3,62.8,52.3,1876,12,94],["2026-09-28",84.2,21.7,18.3,62.5,53.1,1866,12,96],["2026-10-12",84.3,22.8,19.2,61.7,51.6,1842,12,94],["2026-10-23",83.9,21.7,18.2,62.3,53,1859,12,95],["2026-11-08",83.7,21.6,18.1,62.2,53,1854,12,96]];
+var KEYS=["date","w","bf","fat","mus","water","bmr","visc","leg"];
+var METRICS={w:"体重 (kg)",bf:"体脂肪率 (%)",fat:"脂肪量 (kg)",mus:"筋肉量 (kg)",lean:"除脂肪量 (kg)",water:"体水分率 (%)",leg:"脚点"};
+var entries=SEED.map(function(r){var o={};KEYS.forEach(function(k,i){o[k]=r[i]});return o});
+var db=null,docRef=null,ready=false;
+var $=function(id){return document.getElementById(id)};
+function lean(e){return e.w!=null&&e.fat!=null?+(e.w-e.fat).toFixed(1):null}
+function fmt(v,d){return v==null||isNaN(v)?"–":(+v).toFixed(d==null?1:d)}
+function today(){var d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
+function days(a,b){return Math.round((new Date(b)-new Date(a))/864e5)}
+function sorted(){return entries.slice().sort(function(a,b){return a.date<b.date?-1:1})}
+
+async function load(){
+  var local=null;
+  try{local=JSON.parse(localStorage.getItem("bt_entries")||"null")}catch(e){}
+  try{
+    var user=await claude.use("user"),d=await claude.use("db");
+    if(user&&d){
+      var id=await user.id();
+      if(id){
+        db=d;docRef=db.collection("data/users/"+id).doc("tracker");
+        var snap=await docRef.get();
+        if(snap.exists&&snap.data()&&snap.data().entries){entries=snap.data().entries;ready=true;$("status").textContent="データはアカウントに保存されます";return}
+        ready=true;$("status").textContent="データはアカウントに保存されます";return
+      }
+    }
+  }catch(e){}
+  if(local&&local.length)entries=local;
+  ready=true;$("status").textContent="データはこの端末のブラウザに保存されます";
+}
+var saveTimer=null;
+function persist(){
+  try{localStorage.setItem("bt_entries",JSON.stringify(entries))}catch(e){}
+  if(!docRef)return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){docRef.set({entries:entries}).catch(function(){$("status").textContent="保存に失敗しました。もう一度お試しください"})},400);
+}
+
+function phaseInfo(t){
+  if(t<"2026-11-23")return{n:"0. 現状把握",c:["食事を全部記録","毎朝の体重","維持kcalを実測"],per:"〜11/22"};
+  if(t<"2027-04-01")return{n:"1. 減量",c:["維持 -400〜500kcal","タンパク質 140〜160g","筋トレ 週4〜5","歩数 8〜10千","8週目に1週休憩"],per:"11/23〜3月末"};
+  if(t<"2027-04-16")return{n:"2. 移行",c:["毎週 +100〜150kcal","維持kcalに戻す","ボリュームを戻す"],per:"4月上旬"};
+  return{n:"3. 筋肥大",c:["維持 +200〜300kcal","月0.4〜1kg増","筋トレ 週5〜6","体脂肪率の上限 19%"],per:"4月中旬〜"};
+}
+function targetW(t){
+  if(t<"2026-11-23")return START_W;
+  var wk=days("2026-11-23",t)/7;
+  return Math.max(GOAL_W,+(START_W-0.4*wk).toFixed(1));
+}
+function renderPhase(){
+  var t=today(),p=phaseInfo(t),s=sorted(),last=s[s.length-1];
+  var h='<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">いまのフェーズ</h2><span class="tag">'+p.per+'</span></div>';
+  h+='<div style="font-size:18px;font-weight:500;margin-top:4px">'+p.n+'</div><div class="chips">'+p.c.map(function(x){return'<span class="chip">'+x+'</span>'}).join("")+'</div>';
+  if(t>="2026-11-23"&&t<"2027-04-01"){
+    var tg=targetW(t);
+    h+='<div class="sub" style="margin-top:10px">今週の目標体重の目安：<b style="font-weight:500;color:var(--tx)">'+fmt(tg)+'kg</b>（週0.4kgペース）</div>';
+    var old=null;
+    for(var i=s.length-2;i>=0;i--){if(days(s[i].date,last.date)>=6){old=s[i];break}}
+    if(old&&last.w!=null&&old.w!=null){
+      var rate=(last.w-old.w)/(days(old.date,last.date)/7),cls,txt;
+      if(rate<-0.7){cls="rdbg";txt="減りすぎ（週"+fmt(rate,2)+"kg）。筋肉が落ちるので食事を増やしましょう"}
+      else if(rate>-0.15){cls="wnbg";txt="停滞気味（週"+fmt(rate,2)+"kg）。150〜200kcal減らすか歩数を増やしましょう"}
+      else{cls="okbg";txt="順調です（週"+fmt(rate,2)+"kg）"}
+      var col=cls=="rdbg"?"rd":cls=="wnbg"?"wn":"ok";
+      h+='<div class="msg" style="background:var(--'+cls+');color:var(--'+col+')">'+txt+'</div>';
+    }
+  }
+  $("phase").innerHTML=h;
+}
+function delta(v,base,inv){
+  if(v==null||base==null)return"";
+  var d=v-base,c=d==0?"":((d<0)!=!!inv?"dn":"up");
+  return'<span class="d '+c+'">'+(d>0?"+":"")+d.toFixed(1)+'</span>';
+}
+function renderKpi(){
+  var s=sorted(),L=s[s.length-1],B={w:83.7,bf:21.6,mus:62.2,fat:18.1};
+  var lL=lean(L),bL=65.6;
+  var k=[["体重",L.w,B.w,0],["体脂肪率 (%)",L.bf,B.bf,0],["脂肪量",L.fat,B.fat,0],["筋肉量",L.mus,B.mus,1]];
+  $("kpi").innerHTML=k.map(function(x){return'<div class="kpi"><div class="l">'+x[0]+'</div><div class="v">'+fmt(x[1])+'</div>'+delta(x[1],x[2],x[3])+'</div>'}).join("");
+  var pr=Math.max(0,Math.min(1,(START_W-L.w)/(START_W-GOAL_W)));
+  $("pbar").style.width=(pr*100)+"%";
+  $("ptxt").textContent="残り "+fmt(Math.max(0,L.w-GOAL_W))+"kg（"+Math.round(pr*100)+"%）／ 体脂肪率 "+fmt(L.bf)+"% → 目標 "+GOAL_BF+"%";
+}
+function renderChart(){
+  var m=$("metric").value,s=sorted().filter(function(e){return(m=="lean"?lean(e):e[m])!=null});
+  var val=function(e){return m=="lean"?lean(e):e[m]};
+  if(s.length<2){$("chart").innerHTML='<div class="sub">データが2件以上で表示されます</div>';return}
+  var W=600,H=220,pl=44,pr=12,pt=12,pb=26;
+  var t0=new Date(s[0].date).getTime(),t1=new Date(s[s.length-1].date).getTime(),tgPts=[];
+  if(m=="w"){
+    var last=s[s.length-1].date;
+    ["2026-11-23",last,"2027-03-31"].forEach(function(d){if(d>="2026-11-23")tgPts.push(d)});
+  }
+  var all=s.map(val);
+  if(m=="w"){all.push(GOAL_W)}
+  if(m=="bf"){all.push(GOAL_BF)}
+  var mn=Math.min.apply(null,all),mx=Math.max.apply(null,all),pad=(mx-mn)*0.12||1;mn-=pad;mx+=pad;
+  var tEnd=m=="w"?Math.max(t1,new Date("2027-03-31").getTime()):t1;
+  var X=function(t){return pl+(t-t0)/((tEnd-t0)||1)*(W-pl-pr)};
+  var Y=function(v){return pt+(mx-v)/(mx-mn)*(H-pt-pb)};
+  var g="";
+  for(var i=0;i<=4;i++){var v=mn+(mx-mn)*i/4,y=Y(v);g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+y+'" y2="'+y+'" stroke="var(--bd)" stroke-width="1"/><text x="'+(pl-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="11" fill="var(--tx2)">'+v.toFixed(m=="leg"?0:1)+'</text>'}
+  var mo=new Date(s[0].date);mo.setDate(1);
+  while(mo.getTime()<=tEnd){var x=X(mo.getTime());if(x>=pl){g+='<text x="'+x+'" y="'+(H-6)+'" text-anchor="middle" font-size="11" fill="var(--tx2)">'+(mo.getMonth()+1)+'月</text>'}mo.setMonth(mo.getMonth()+2)}
+  if(m=="w"){
+    var a=[START_W,GOAL_W],ax=[new Date("2026-11-23").getTime(),new Date("2027-03-29").getTime()];
+    g+='<line x1="'+X(ax[0])+'" y1="'+Y(START_W)+'" x2="'+X(ax[1])+'" y2="'+Y(GOAL_W)+'" stroke="var(--ok)" stroke-width="1.5" stroke-dasharray="5 4"/>';
+  }
+  if(m=="w"||m=="bf"){var gv=m=="w"?GOAL_W:GOAL_BF;g+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(gv)+'" y2="'+Y(gv)+'" stroke="var(--ok)" stroke-width="1" stroke-dasharray="2 4"/>'}
+  var pts=s.map(function(e){return X(new Date(e.date).getTime()).toFixed(1)+","+Y(val(e)).toFixed(1)}).join(" ");
+  g+='<polyline points="'+pts+'" fill="none" stroke="var(--ac)" stroke-width="2"/>';
+  s.forEach(function(e){g+='<circle cx="'+X(new Date(e.date).getTime())+'" cy="'+Y(val(e))+'" r="3.5" fill="var(--ac)"/>'});
+  $("chart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+METRICS[m]+'の推移">'+g+'</svg>';
+  $("legend").textContent=m=="w"?"青：実測　緑の破線：週0.4kgペースの目安（11/23〜）":m=="bf"?"青：実測　緑の点線：目標15%":"青：実測";
+}
+function wk(d){var x=new Date(d+"T00:00:00");x.setDate(x.getDate()-(x.getDay()+6)%7);return x.getFullYear()+"-"+("0"+(x.getMonth()+1)).slice(-2)+"-"+("0"+x.getDate()).slice(-2)}
+function prevW(e){var s=sorted(),p=null;for(var i=0;i<s.length;i++){if(s[i].date<e.date)p=s[i]}return p?p.w:null}
+function renderWk(){var k=wk(today()),s=sorted(),last=s[s.length-1],has=entries.some(function(e){return wk(e.date)===k});$("wk").textContent=(has?"今週は記録済みです":"今週はまだ未記録です")+(last?"（前回："+days(last.date,today())+"日前）":"")}
+function renderTable(){
+  var s=sorted().reverse();
+  var h='<tr><th>日付</th><th>体重（前回比）</th><th>体脂肪率</th><th>脂肪量</th><th>筋肉量</th><th>除脂肪</th><th>水分率</th><th>脚点</th><th></th></tr>';
+  s.forEach(function(e){
+    h+='<tr><td>'+e.date.slice(2).replace(/-/g,"/")+'</td><td>'+fmt(e.w)+' '+delta(e.w,prevW(e),0)+'</td><td>'+fmt(e.bf)+'</td><td>'+fmt(e.fat)+'</td><td>'+fmt(e.mus)+'</td><td>'+fmt(lean(e))+'</td><td>'+fmt(e.water)+'</td><td>'+fmt(e.leg,0)+'</td><td><button class="ghost" data-d="'+e.date+'" aria-label="削除">削除</button></td></tr>';
+  });
+  $("tbl").innerHTML=h;
+}
+function renderAll(){renderMeal();renderWk();renderPhase();renderKpi();renderChart();renderTable()}
+
+$("tbl").addEventListener("click",function(ev){
+  var d=ev.target.getAttribute&&ev.target.getAttribute("data-d");
+  if(!d)return;
+  if(ev.target.getAttribute("data-c")){entries=entries.filter(function(e){return e.date!==d});persist();renderAll();return}
+  ev.target.textContent="本当に削除";ev.target.setAttribute("data-c","1");
+  setTimeout(function(){if(ev.target.isConnected){ev.target.textContent="削除";ev.target.removeAttribute("data-c")}},3000);
+});
+var BASE=[["朝","ツナトースト（ツナ缶＋チーズ1枚＋マヨ小さじ2）",21,25],["昼","卵2個＋納豆＋ご飯",24,26],["夜","母の手料理（魚か肉＋味噌汁）",30,40],["ジム後","プロテイン1杯",15,20],["コーヒー","ブラック＋牛乳50ml×3",5,5]];
+var OPTS=[["サラダチキン1個（昼）",20,25],["ツナ缶ノンオイル（昼）",12,14],["豆腐半丁（昼）",10,10],["枝豆100g（間食）",11,11],["ギリシャヨーグルト（間食）",10,10],["ゆで卵1個（朝・間食）",6,6],["コーヒー1杯をカフェオレ200mlに",5,5]];
+var sel=[];try{sel=JSON.parse(localStorage.getItem("bt_opts")||"[]")||[]}catch(e){}
+function renderMeal(){
+  var lo=0,hi=0,h='<tr><th>食事</th><th style="text-align:left">内容</th><th>P(g)</th></tr>';
+  BASE.forEach(function(b){lo+=b[2];hi+=b[3];h+='<tr><td>'+b[0]+'</td><td>'+b[1]+'</td><td>'+(b[2]==b[3]?b[2]:b[2]+'〜'+b[3])+'</td></tr>'});
+  $("meal").innerHTML=h;
+  var o='';
+  OPTS.forEach(function(p,i){var on=sel.indexOf(i)>=0;if(on){lo+=p[1];hi+=p[2]}o+='<label class="opt"><input type="checkbox" data-i="'+i+'"'+(on?' checked':'')+'>'+p[0]+'<span>+'+(p[1]==p[2]?p[1]:p[1]+'〜'+p[2])+'g</span></label>'});
+  $("opts").innerHTML=o;
+  $("mbar").style.width=Math.min(100,((lo+hi)/2)/160*100)+'%';
+  var st=lo>=140?'目標に届いています':hi<140?'あと '+(140-hi)+'g 以上足りません':'目標付近です（下限まであと最大 '+(140-lo)+'g）';
+  $("mtxt").innerHTML='合計 <b style="font-weight:500">'+lo+'〜'+hi+'g</b>／ '+st;
+}
+$("opts").addEventListener("change",function(ev){
+  var i=parseInt(ev.target.getAttribute("data-i"));if(isNaN(i))return;
+  sel=sel.filter(function(x){return x!==i});if(ev.target.checked)sel.push(i);
+  try{localStorage.setItem("bt_opts",JSON.stringify(sel))}catch(e){}
+  renderMeal();
+});
+$("metric").innerHTML=Object.keys(METRICS).map(function(k){return'<option value="'+k+'">'+METRICS[k]+'</option>'}).join("");
+$("metric").addEventListener("change",renderChart);
+$("f_date").value=today();
+$("save").addEventListener("click",function(){
+  var g=function(k){var v=$("f_"+k).value;return v===""?null:parseFloat(v)};
+  var e={date:$("f_date").value,w:g("w"),bf:g("bf"),fat:g("fat"),mus:g("mus"),water:g("water"),bmr:g("bmr"),visc:g("visc"),leg:g("leg")};
+  if(!e.date||e.w==null){$("saved").textContent="日付と体重は必須です";return}
+  if(e.fat==null&&e.bf!=null)e.fat=+(e.w*e.bf/100).toFixed(1);
+  entries=entries.filter(function(x){return wk(x.date)!==wk(e.date)});
+  entries.push(e);persist();renderAll();
+  ["w","bf","fat","mus","water","bmr","visc","leg"].forEach(function(k){$("f_"+k).value=""});
+  $("saved").textContent=e.date+" の記録を保存しました";
+});
+$("exp").addEventListener("click",function(){
+  var data=JSON.stringify({v:1,entries:sorted(),opts:sel},null,1);
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([data],{type:"application/json"}));
+  a.download="body_tracker_"+today()+".json";
+  document.body.appendChild(a);a.click();a.remove();
+  $("bmsg").textContent="書き出しました（"+entries.length+"件）";
+});
+$("imp").addEventListener("click",function(){$("impf").click()});
+$("impf").addEventListener("change",function(ev){
+  var f=ev.target.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var d=JSON.parse(r.result);
+      if(!d||!Array.isArray(d.entries))throw 0;
+      if(!confirm("現在のデータを置き換えます（"+d.entries.length+"件）。よろしいですか？"))return;
+      entries=d.entries;if(Array.isArray(d.opts))sel=d.opts;
+      try{localStorage.setItem("bt_opts",JSON.stringify(sel))}catch(e){}
+      persist();renderAll();$("bmsg").textContent="読み込みました（"+entries.length+"件）";
+    }catch(e){$("bmsg").textContent="読み込めませんでした。書き出したJSONを選んでください"}
+    ev.target.value="";
+  };
+  r.readAsText(f);
+});
+if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})})}
+renderAll();
+load().then(renderAll);
+</script>
+</body>
+</html>
